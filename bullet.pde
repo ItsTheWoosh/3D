@@ -19,6 +19,7 @@ class bullet {
   }
   
   void act() {
-    
+    x += vx;
+    z += vz;
   }
 }

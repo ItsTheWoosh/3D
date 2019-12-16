@@ -3,11 +3,20 @@ color black = #000000;
 color white = #FFFFFF;
 
 //variables
+int bs = 100;
 PImage map;
-boolean up, down, right, left;
-float lx = 2500, ly = height / 2, lz = 2500, headAngle = 0;
-PVector direction = new PVector(0, -1);
-ArrayList<bullet> bullets = new ArrayList<>();
+boolean up, down, right, left, space, shift, leap = true, fly = false;
+int ground = -100;
+int frames = 0;
+float lx = 2500;
+float ly = (height / 2 - bs / 2) - 100;
+float lz = 2500;
+PVector xzDirection = new PVector(0, -10);
+PVector xyDirection = new PVector(10, 0);
+PVector strafeDir   = new PVector(10, 0);
+float leftRightHeadAngle = 0;
+float upDownHeadAngle    = 0;
+ArrayList<bullet> bullets = new ArrayList<bullet>();
 
 //textures
 PImage qblock, dT, dS, dB;
@@ -15,11 +24,11 @@ PImage qblock, dT, dS, dB;
 //World manipulation
 
 float rotx = PI/4, roty = PI/4;
-int bs = 10;
+
 
 void setup() {
-  size(800, 600, P3D);
-
+  size(1200, 1000, P3D);
+  //fullScreen(P3D);
   //load textures
   qblock = loadImage("Diamond Ore.png");
   dT     = loadImage("Diamond Ore.png");
@@ -29,33 +38,90 @@ void setup() {
 
   //load map
   map = loadImage("map.png");
-  ArrayList<bullet> bullets = new ArrayList<bullet>();
+  bullets = new ArrayList<bullet>();
 }
 
 void draw() {
-  camera(lx, ly, lz, direction.x + lx, 0, -1, 0, 1, 0);
-  direction.rotate(headAngle);
-  headAngle = -(pmouseX - mouseX) * 0.01;
-  
-  if (up)    {
-    lx += direction.x;
-    lz += direction.y;
+  frames++;
+  background(0);
+
+  float dx = lx + xzDirection.x;
+  float dy = ly + xyDirection.y;
+  float dz = lz + xzDirection.y;
+  camera(lx, ly, lz, dx, dy, dz, 0, 1, 0); 
+  xzDirection.rotate(leftRightHeadAngle);
+  xyDirection.rotate(upDownHeadAngle);
+  leftRightHeadAngle = -(pmouseX - mouseX) * 0.01;
+  //upDownHeadAngle = (pmouseX - mouseX) * 0.01;
+
+  //headAngle = headAngle + 0.01;
+
+  strafeDir = xzDirection.copy();
+  strafeDir.rotate(PI/2);
+
+  if (up) {
+    lx = lx + xzDirection.x;
+    lz = lz + xzDirection.y;
   }
   if (down) {
-    
-    lz += 10;
+    lx = lx - xyDirection.x;
+    lz = lz - xzDirection.y;
   }
-  if (right) lx = lx + 10;
-  if (left)  lx = lx - 10;
-  background(255);
-  //pushMatrix();
-  rotateX(rotx);
-  rotateY(roty);
+  if (left) {
+    lx = lx - strafeDir.x;
+    lz = lz - strafeDir.y;
+  }
+  if (right) {
+    lx = lx + strafeDir.x;
+    lz = lz + strafeDir.y;
+  }
+  if (!fly) {
+    if (space && leap) {
+      for (int jump = 60; jump > 0; jump--) {
+        if (jump % 5 == 0) {
+          ly = ly - jump / 2;
+        }
+      }
+      leap = false;
+    }
+  } else if (fly) {
+    if (space) {
+      ly = ly - 10;
+    }
+  }
+  if (fly) {
+    if (shift) {
+      ly = ly + 10;
+    }
+  }
+  //println(strafeDir.y);
+  println(ly);
+  //direction.rotate(-(pmouseX - mouseX) * 0.01);
+  if (!fly) {
+    if (ly == ground) {
+      leap = true;
+    }
+    if (ly > ground) {
+      ly = -100;
+    }
+    if (ly < ground) {
+      ly += 10;
+    }
+  }  
   drawMap();
   drawFloor();  
-  drawbullets();
-  bullets.add(new bullet(lx, ly, lz, direction.x, direction.y));
-  //popMatrix();
+  if (mousePressed) {
+    bullets.add(new bullet(lx, ly, lz, xzDirection.x, xzDirection.y));
+    drawBullets();
+  }
+}
+
+void drawBullets() {
+  for (int i = 0; i < bullets.size(); i++) {
+    bullet b = bullets.get(i);        
+    b.act();
+    b.show();
+  }
 }
 
 void drawFloor() {
@@ -82,10 +148,12 @@ void drawMap() {
   while ( mapY < map.height ) {
     //read in a pixel
     color pixel = map.get(mapX, mapY);
+
     worldX = mapX * bs;
     worldZ = mapY * bs;
+
     if (pixel == black) {
-      texturedBox(dT, dS, dB, worldX, height/2, worldZ, bs/2);
+      texturedBox(dT, dS, dB, worldX, 0, worldZ, bs/2);
     }
     mapX++;
     if (mapX > map.width) {
@@ -133,7 +201,7 @@ void texturedBox(PImage top, PImage side, PImage bottom, float x, float y, float
   endShape();
   beginShape();
   texture(bottom);
-  
+
   // +Y Bottom Face
   vertex(-1, 1, -1, 0, 0);
   vertex( 1, 1, -1, 1, 0);
@@ -155,22 +223,33 @@ void texturedBox(PImage top, PImage side, PImage bottom, float x, float y, float
 }
 
 void mouseDragged() {
-  rotx = rotx + (pmouseY - mouseY) * 0.01;
-  roty = roty - (pmouseX - mouseX) * 0.01;
+  //rotx = rotx + (pmouseY - mouseY) * 0.01;
+  //roty = roty - (pmouseX - mouseX) * 0.01;
 }
 
 void keyPressed() {
-  if (keyCode == UP) up = true;
-  if (keyCode == DOWN) down = true;
-  if (keyCode == RIGHT) right = true;
-  if (keyCode == LEFT) left = true;
+  if (keyCode == UP    || keyCode == 'W') up    = true;
+  if (keyCode == DOWN  || keyCode == 'S') down  = true;
+  if (keyCode == RIGHT || keyCode == 'D') right = true;
+  if (keyCode == LEFT  || keyCode == 'A') left  = true;
+  if (keyCode == ' '   /*             */) space = true;
+  if (keyCode == SHIFT /*             */) shift = true;
+  if (keyCode == 'L'                    ) {
+    if (fly) {
+      fly = false;
+    } else if (!fly) {
+      fly = true;
+    }
+  }
 }
 
 void keyReleased() {
-  if (keyCode == UP) up = false;
-  if (keyCode == DOWN) down = false;
-  if (keyCode == RIGHT) right = false;
-  if (keyCode == LEFT) left = false;
+  if (keyCode == UP    || keyCode == 'W') up    = false;
+  if (keyCode == DOWN  || keyCode == 'S') down  = false;
+  if (keyCode == RIGHT || keyCode == 'D') right = false;
+  if (keyCode == LEFT  || keyCode == 'A') left  = false;
+  if (keyCode == ' '   /*             */) space = false;
+  if (keyCode == SHIFT /*             */) shift = false;
 }
 
 void handleBullets() {
