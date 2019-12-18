@@ -5,9 +5,9 @@ color white = #FFFFFF;
 //variables
 int bs = 100;
 PImage map;
-boolean up, down, right, left, space, shift, leap = true, fly = false;
+boolean up, down, right, left, space, shift, ctrl, leap = true, fly = false;
 int ground = -100;
-int frames = 0;
+int frames = 0, jumpHeight = 0;
 float lx = 2500;
 float ly = (height / 2 - bs / 2) - 100;
 float lz = 2500;
@@ -16,7 +16,7 @@ PVector xyDirection = new PVector(10, 0);
 PVector strafeDir   = new PVector(10, 0);
 float leftRightHeadAngle = 0;
 float upDownHeadAngle    = 0;
-ArrayList<bullet> bullets = new ArrayList<bullet>();
+ArrayList<Bullet> Bullets = new ArrayList<Bullet>();
 
 //textures
 PImage qblock, dT, dS, dB;
@@ -38,11 +38,10 @@ void setup() {
 
   //load map
   map = loadImage("map.png");
-  bullets = new ArrayList<bullet>();
+  Bullets = new ArrayList<Bullet>();
 }
 
 void draw() {
-  frames++;
   background(0);
 
   float dx = lx + xzDirection.x;
@@ -63,6 +62,24 @@ void draw() {
     lx = lx + xzDirection.x;
     lz = lz + xzDirection.y;
   }
+  /**
+   *if (up && ctrl) {
+   *if (xzDirection.x > 0) {
+   *  lx = 10 + (lx + xzDirection.x);
+   *} else if (xzDirection.x < 0) {
+   *  lx = 10 - (lx + xzDirection.x);
+   *}
+   *if (xzDirection.y > 0) {
+   *  lz = 10 + (lz + xzDirection.y);
+   *} else if (xzDirection.y < 0) {
+   *  lz = 10 - (lz + xzDirection.y);
+   *}
+   *lx = 10 + (lx + xzDirection.x);
+   *lz = 10 + (lz + xzDirection.y);
+   *}
+   */
+  println(xzDirection.x);
+  println(xzDirection.y);
   if (down) {
     lx = lx - xyDirection.x;
     lz = lz - xzDirection.y;
@@ -77,14 +94,18 @@ void draw() {
   }
   if (!fly) {
     if (space && leap) {
-      for (int jump = 60; jump > 0; jump--) {
-        if (jump % 5 == 0) {
-          ly = ly - jump / 2;
-        }
+      frames = 0;
+      frames++;
+      for(jumpHeight = 25; jumpHeight > 0; jumpHeight--) {
+      //if (frames % 20 == 0) {
+        println(jumpHeight);
+        ly = ly - jumpHeight;
       }
-      leap = false;
+      //}
     }
-  } else if (fly) {
+    leap = false;
+  }
+  else if (fly) {
     if (space) {
       ly = ly - 10;
     }
@@ -105,20 +126,20 @@ void draw() {
       ly = -100;
     }
     if (ly < ground) {
-      ly += 10;
+      ly += 9.81;
     }
   }  
   drawMap();
   drawFloor();  
   if (mousePressed) {
-    bullets.add(new bullet(lx, ly, lz, xzDirection.x, xzDirection.y));
+    Bullets.add(new Bullet(lx, ly, lz, xzDirection.x, xzDirection.y));
     drawBullets();
   }
 }
 
 void drawBullets() {
-  for (int i = 0; i < bullets.size(); i++) {
-    bullet b = bullets.get(i);        
+  for (int i = 0; i < Bullets.size(); i++) {
+    Bullet b = Bullets.get(i);        
     b.act();
     b.show();
   }
@@ -228,12 +249,13 @@ void mouseDragged() {
 }
 
 void keyPressed() {
-  if (keyCode == UP    || keyCode == 'W') up    = true;
-  if (keyCode == DOWN  || keyCode == 'S') down  = true;
-  if (keyCode == RIGHT || keyCode == 'D') right = true;
-  if (keyCode == LEFT  || keyCode == 'A') left  = true;
-  if (keyCode == ' '   /*             */) space = true;
-  if (keyCode == SHIFT /*             */) shift = true;
+  if (keyCode == UP      || keyCode == 'W') up    = true;
+  if (keyCode == DOWN    || keyCode == 'S') down  = true;
+  if (keyCode == RIGHT   || keyCode == 'D') right = true;
+  if (keyCode == LEFT    || keyCode == 'A') left  = true;
+  if (keyCode == ' '     /*             */) space = true;
+  if (keyCode == SHIFT   /*             */) shift = true;
+  if (keyCode == CONTROL /*             */) ctrl  = true;
   if (keyCode == 'L'                    ) {
     if (fly) {
       fly = false;
@@ -244,17 +266,18 @@ void keyPressed() {
 }
 
 void keyReleased() {
-  if (keyCode == UP    || keyCode == 'W') up    = false;
-  if (keyCode == DOWN  || keyCode == 'S') down  = false;
-  if (keyCode == RIGHT || keyCode == 'D') right = false;
-  if (keyCode == LEFT  || keyCode == 'A') left  = false;
-  if (keyCode == ' '   /*             */) space = false;
-  if (keyCode == SHIFT /*             */) shift = false;
+  if (keyCode == UP      || keyCode == 'W') up    = false;
+  if (keyCode == DOWN    || keyCode == 'S') down  = false;
+  if (keyCode == RIGHT   || keyCode == 'D') right = false;
+  if (keyCode == LEFT    || keyCode == 'A') left  = false;
+  if (keyCode == ' '     /*             */) space = false;
+  if (keyCode == SHIFT   /*             */) shift = false;
+  if (keyCode == CONTROL /*             */) ctrl  = false;
 }
 
 void handleBullets() {
-  for (int i = 0; i < bullets.size(); i++) {
-    bullet b = bullets.get(i);
+  for (int i = 0; i < Bullets.size(); i++) {
+    Bullet b = Bullets.get(i);
     b.show();
     b.act();
   }
